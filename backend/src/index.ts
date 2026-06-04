@@ -11,6 +11,12 @@ import helmet from 'helmet';
 import morgan from 'morgan';
 import { DatabaseRouter } from './config/database-router.js';
 import healthRoutes from './routes/health.routes.js';
+import authRoutes from './routes/auth.routes.js';
+import tenantRoutes from './routes/tenant.routes.js';
+import pdpaRoutes from './routes/pdpa.routes.js';
+import { globalRateLimit } from './middlewares/rate-limit.middleware.js';
+import { freezeMiddleware } from './middlewares/freeze.middleware.js';
+import { auditMiddleware } from './middlewares/audit.middleware.js';
 
 // Initialize database connection
 const { isSandboxEnvironment } = DatabaseRouter.initializeDatabaseConnection();
@@ -26,6 +32,9 @@ app.use(cors({ origin: '*' }));
 app.use(morgan('dev'));
 app.use(express.json({ limit: '10mb' }));
 app.use(express.urlencoded({ extended: true }));
+app.use(globalRateLimit);
+app.use(freezeMiddleware);
+app.use(auditMiddleware);
 
 // ============================================================
 // Routes — Public (no auth)
@@ -33,13 +42,11 @@ app.use(express.urlencoded({ extended: true }));
 app.use('/health', healthRoutes);
 
 // ============================================================
-// Routes — Protected (auth required)
-// Future routes will be mounted here with requireAuth middleware:
-//
-// import { requireAuth, requireTenantAccess } from './middlewares/auth.middleware.js';
-// app.use('/api', requireAuth);
-// app.use('/api/tenants/:tenantId', requireAuth, requireTenantAccess);
+// Routes — Auth & Tenant Management
 // ============================================================
+app.use('/auth', authRoutes);
+app.use('/tenants', tenantRoutes);
+app.use('/pdpa', pdpaRoutes);
 
 // ============================================================
 // Error Handling

@@ -393,3 +393,157 @@ export interface HermesConnectionStatus {
   models: string[];
   error?: string;
 }
+
+// ============================================================
+// Global User Profile (multi-company)
+// ============================================================
+
+export interface TenantMembership {
+  tenantId: string;
+  role: string;
+  permissions: string[];
+  joinedAt: string;
+}
+
+export interface GlobalUserProfile {
+  uid: string;
+  email: string;
+  displayName: string;
+  photoUrl: string | null;
+  kycStatus: 'PENDING' | 'VERIFIED' | 'REJECTED';
+  activeTenantId: string | null;
+  tenantMemberships: TenantMembership[];
+  pdpaConsentedAt: string | null;
+  pdpaConsentVersion: string | null;
+  isGlobalAdmin: boolean;
+  isSuperAdminTeam: boolean;
+  createdAt: string;
+  updatedAt: string;
+}
+
+// ============================================================
+// Tenant Configuration
+// ============================================================
+
+export type GpsTrackingMode = 'CHECK_IN_ONLY' | 'WORK_HOURS' | 'DISABLED';
+
+export interface TenantConfig {
+  tenantId: string;
+  companyNameTH: string;
+  companyNameEN: string;
+  vatId: string;
+  dbdRegistrationNumber: string | null;
+  subscriptionTier: 'STARTER' | 'PRO' | 'ENTERPRISE';
+  subscriptionExpiresAt: string | null;
+  verificationStatus: 'PENDING' | 'VERIFIED' | 'REJECTED';
+  isEmergencyFrozen: boolean;
+  gpsTrackingMode: GpsTrackingMode;
+  activeAddons: string[];
+  maxUsers: number;
+  maxProducts: number;
+  storageQuotaBytes: number;
+  createdBy: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
+// ============================================================
+// Platform Config (Super Admin)
+// ============================================================
+
+export interface SubscriptionTierConfig {
+  tierId: string;
+  name: string;
+  monthlyPriceTHB: number;
+  limits: {
+    users: number;
+    products: number;
+    storageBytes: number;
+  };
+  features: string[];
+}
+
+export interface AddonConfig {
+  addonId: string;
+  name: string;
+  monthlyPriceTHB: number;
+  description: string;
+}
+
+export interface CouponCode {
+  couponId: string;
+  code: string;
+  discountType: 'PERCENTAGE' | 'FIXED_AMOUNT';
+  discountValue: number;
+  validFrom: string;
+  validUntil: string;
+  maxUsageTotal: number;
+  maxUsagePerUser: number;
+  currentUsageCount: number;
+  isActive: boolean;
+  createdBy: string;
+  createdAt: string;
+}
+
+// ============================================================
+// Audit Log
+// ============================================================
+
+export interface AuditLogEntry {
+  logId: string;
+  userId: string;
+  userEmail: string;
+  tenantId: string | null;
+  action: string;
+  resourceType: string;
+  resourceId: string;
+  details: Record<string, unknown>;
+  ipAddress: string;
+  timestamp: string;
+}
+
+// ============================================================
+// PDPA Consent
+// ============================================================
+
+export interface PdpaConsent {
+  consentId: string;
+  userId: string;
+  consentVersion: string;
+  consentedAt: string;
+  purposes: string[];
+  ipAddress: string;
+}
+
+// ============================================================
+// Content Moderation
+// ============================================================
+
+export type ModerationVerdict = 'AUTO_APPROVED' | 'NEEDS_REVIEW' | 'AUTO_REJECTED' | 'MANUALLY_APPROVED' | 'MANUALLY_REJECTED';
+
+export interface ModerationQueueItem {
+  queueId: string;
+  contentType: 'PRODUCT' | 'SHOWCASE' | 'CHAT_MESSAGE' | 'NEWS_POST' | 'COMPANY_PROFILE';
+  contentId: string;
+  tenantId: string;
+  submittedBy: string;
+  hermesConfidence: number;
+  hermesVerdict: ModerationVerdict;
+  hermesReasoning: string;
+  detectedSubstanceCategory: ControlledSubstanceCategory | null;
+  finalVerdict: ModerationVerdict | null;
+  reviewedBy: string | null;
+  reviewedAt: string | null;
+  createdAt: string;
+}
+
+// ============================================================
+// Platform Configuration
+// ============================================================
+
+export interface PlatformFreezeConfig {
+  isFrozen: boolean;
+  frozenAt: string;
+  frozenBy: string;
+  reason: string;
+}
