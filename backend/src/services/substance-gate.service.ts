@@ -26,6 +26,7 @@ const VALID_CATEGORIES: ReadonlySet<ControlledSubstanceCategory> = new Set([
   'ALCOHOL',
   'TOBACCO',
   'CANNABIS_THC',
+  'CBD_BELOW_THRESHOLD',
   'NARCOTICS',
 ]);
 
@@ -34,7 +35,8 @@ Analyze the product and classify it into EXACTLY ONE of these categories:
 - NONE: Not a controlled substance
 - ALCOHOL: Alcoholic beverages or products containing alcohol for consumption
 - TOBACCO: Cigarettes, cigars, vaping products, e-cigarettes, nicotine products
-- CANNABIS_THC: Products containing THC, marijuana, cannabis extracts
+- CANNABIS_THC: Products containing THC above 0.2%, marijuana, cannabis extracts
+- CBD_BELOW_THRESHOLD: CBD products with THC content below 0.2% (hemp extracts, CBD oils, CBD cosmetics)
 - NARCOTICS: Illegal drugs, controlled narcotics, prescription-only substances
 
 Respond ONLY with valid JSON in this exact format:
@@ -42,9 +44,10 @@ Respond ONLY with valid JSON in this exact format:
 
 Rules:
 - confidence must be between 0.0 and 1.0
-- category must be exactly one of: NONE, ALCOHOL, TOBACCO, CANNABIS_THC, NARCOTICS
+- category must be exactly one of: NONE, ALCOHOL, TOBACCO, CANNABIS_THC, CBD_BELOW_THRESHOLD, NARCOTICS
 - Be conservative: if unsure, use a lower confidence score
-- Consider the Thai regulatory context`;
+- Consider the Thai regulatory context
+- CBD products with < 0.2% THC should be classified as CBD_BELOW_THRESHOLD, not CANNABIS_THC`;
 
 export class SubstanceGateService {
   /**
@@ -118,7 +121,8 @@ export class SubstanceGateService {
    * Check if a substance category requires any restrictions.
    */
   static isRestricted(category: ControlledSubstanceCategory): boolean {
-    return category !== 'NONE';
+    // CBD below threshold is not considered restricted — publicly visible
+    return category !== 'NONE' && category !== 'CBD_BELOW_THRESHOLD';
   }
 
   /**
@@ -147,7 +151,7 @@ export class SubstanceGateService {
           publicVisible: false,
           requiresB2BVerification: true,
           requiresAgeGate: true,
-          requiresLicense: false,
+          requiresLicense: true,
           canAdvertise: false,
         };
 
@@ -167,6 +171,15 @@ export class SubstanceGateService {
           requiresAgeGate: true,
           requiresLicense: true,
           canAdvertise: false,
+        };
+
+      case 'CBD_BELOW_THRESHOLD':
+        return {
+          publicVisible: true,
+          requiresB2BVerification: false,
+          requiresAgeGate: false,
+          requiresLicense: false,
+          canAdvertise: true,
         };
 
       case 'NONE':

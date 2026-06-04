@@ -132,6 +132,7 @@ export type ControlledSubstanceCategory =
   | 'ALCOHOL'
   | 'TOBACCO'
   | 'CANNABIS_THC'
+  | 'CBD_BELOW_THRESHOLD'
   | 'NARCOTICS';
 
 export type ModerationStatus =
@@ -547,3 +548,152 @@ export interface PlatformFreezeConfig {
   frozenBy: string;
   reason: string;
 }
+
+// ============================================================
+// Company License & Verification (Thai Law Compliance)
+// ============================================================
+
+export type CompanyLicenseType =
+  | 'EXCISE_ALCOHOL_TYPE1'
+  | 'EXCISE_ALCOHOL_TYPE2'
+  | 'EXCISE_TOBACCO'
+  | 'MOPH_CANNABIS'
+  | 'FDA_PHARMACEUTICAL'
+  | 'FDA_COSMETIC'
+  | 'FDA_FOOD_SUPPLEMENT';
+
+export interface CompanyLicense {
+  licenseId: string;
+  licenseType: CompanyLicenseType;
+  licenseNumber: string;
+  issuedBy: string;
+  validFrom: string;
+  validUntil: string;
+  documentUrl: string;  // encrypted storage path
+  verified: boolean;
+  verifiedBy: string | null;
+  verifiedAt: string | null;
+}
+
+export type CompanyVerificationStep =
+  | 'PENDING'
+  | 'DBD_SUBMITTED'
+  | 'DBD_VERIFIED'
+  | 'PERSON_SUBMITTED'
+  | 'PERSON_VERIFIED'
+  | 'FULLY_VERIFIED'
+  | 'REJECTED';
+
+export interface CompanyVerification {
+  tenantId: string;
+  step: CompanyVerificationStep;
+  dbdCertificateUrl: string | null;
+  dbdVerified: boolean;
+  dbdVerifiedAt: string | null;
+  taxIdVerified: boolean;
+  authorizedPersonName: string | null;
+  authorizedPersonIdUrl: string | null;  // encrypted, religion/blood type must be redacted
+  authorizedPersonVerified: boolean;
+  authorizedPersonVerifiedAt: string | null;
+  licenses: CompanyLicense[];
+  rejectionReason: string | null;
+  verifiedBy: string | null;
+  createdAt: string;
+  updatedAt: string;
+}
+
+// ============================================================
+// Company Public vs B2B Profile
+// ============================================================
+
+export interface CompanyPublicProfile {
+  tenantId: string;
+  legalName: string;            // From DBD registration
+  publicDescription: string;    // Generic: "Licensed beverage distributor"
+  publicIndustry: string;       // "Food & Beverage" (no brand names)
+  logoUrl: string | null;
+  websiteUrl: string | null;
+  province: string;
+  isVerified: boolean;
+}
+
+export interface CompanyB2bProfile {
+  tenantId: string;
+  b2bDescription: string;       // "Official distributor of Chang Beer..."
+  b2bBrands: string[];          // ["Chang", "SangSom"]
+  b2bCatalogCategories: string[];
+  wholesalePricingVisible: boolean;
+  contactEmail: string;
+  contactPhone: string;
+  minimumOrderTHB: number | null;
+}
+
+// ============================================================
+// KYC Archive (Cold Storage for Deleted Users)
+// ============================================================
+
+export interface KycArchiveAccessLog {
+  accessedBy: string;
+  accessedAt: string;
+  reason: string;
+}
+
+export interface KycArchiveEntry {
+  archiveId: string;
+  originalUserId: string;
+  originalEmailHash: string;       // hashed, not plain text
+  idDocumentUrl: string;           // encrypted cold storage
+  faceComparisonResult: 'MATCH' | 'NO_MATCH' | 'INCONCLUSIVE';
+  verificationDate: string;
+  accountDeletedAt: string;
+  retentionYears: number;          // default 5
+  scheduledPurgeAt: string;        // accountDeletedAt + retentionYears
+  accessLog: KycArchiveAccessLog[];
+  createdAt: string;
+}
+
+// ============================================================
+// Government Takedown Request (Safe Harbor)
+// ============================================================
+
+export type TakedownRequestStatus =
+  | 'RECEIVED'
+  | 'REVIEWING'
+  | 'COMPLIED'
+  | 'APPEALED'
+  | 'EXPIRED';
+
+export interface TakedownRequest {
+  requestId: string;
+  requestedBy: string;           // government agency or rights holder
+  requestType: 'GOVERNMENT_ORDER' | 'RIGHTS_HOLDER' | 'USER_REPORT';
+  targetContentType: string;
+  targetContentId: string;
+  tenantId: string | null;
+  reason: string;
+  legalBasis: string;            // specific law section
+  receivedAt: string;
+  deadline: string;              // receivedAt + 24 hours
+  status: TakedownRequestStatus;
+  actionTaken: string | null;
+  actionBy: string | null;
+  completedAt: string | null;
+}
+
+// ============================================================
+// License-to-Catalog Mapping
+// ============================================================
+
+/**
+ * Maps license types to the substance categories they unlock.
+ * A company must hold the correct license to view restricted catalogs.
+ */
+export const LICENSE_CATALOG_MAP: Record<CompanyLicenseType, ControlledSubstanceCategory[]> = {
+  EXCISE_ALCOHOL_TYPE1: ['ALCOHOL'],
+  EXCISE_ALCOHOL_TYPE2: ['ALCOHOL'],
+  EXCISE_TOBACCO: ['TOBACCO'],
+  MOPH_CANNABIS: ['CANNABIS_THC'],
+  FDA_PHARMACEUTICAL: ['NARCOTICS'],
+  FDA_COSMETIC: ['CBD_BELOW_THRESHOLD'],
+  FDA_FOOD_SUPPLEMENT: ['CBD_BELOW_THRESHOLD'],
+};
