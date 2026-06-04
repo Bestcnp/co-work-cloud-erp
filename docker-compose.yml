@@ -1,0 +1,85 @@
+services:
+  # ============================================
+  # Backend API Server
+  # ============================================
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+      target: builder
+    ports:
+      - "5001:5001"
+    volumes:
+      - ./backend/src:/app/src
+      - ./backend/package.json:/app/package.json
+    environment:
+      - NODE_ENV=development
+      - DEV_SANDBOX_ACTIVE=true
+      - DEV_BYPASS_AUTH=true
+      - PORT=5001
+      - OLLAMA_HOST=http://host.docker.internal:11434
+      - HERMES_MODEL=hermes3:8b
+      - FIRESTORE_EMULATOR_HOST=firebase-emulators:8080
+      - FIREBASE_AUTH_EMULATOR_HOST=firebase-emulators:9099
+    command: npx tsx watch src/index.ts
+    depends_on:
+      firebase-emulators:
+        condition: service_healthy
+    networks:
+      - erp-network
+
+  # ============================================
+  # Frontend Dev Server
+  # ============================================
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+      target: dev
+    ports:
+      - "3000:3000"
+    volumes:
+      - ./frontend/src:/app/src
+      - ./frontend/index.html:/app/index.html
+      - ./frontend/vite.config.ts:/app/vite.config.ts
+    environment:
+      - VITE_API_URL=http://localhost:5001
+      - VITE_FIREBASE_API_KEY=demo-api-key
+      - VITE_FIREBASE_AUTH_DOMAIN=demo-project.firebaseapp.com
+      - VITE_FIREBASE_PROJECT_ID=demo-project
+    command: npm run dev
+    depends_on:
+      - backend
+    networks:
+      - erp-network
+
+  # ============================================
+  # Firebase Emulators (Auth + Firestore + UI)
+  # ============================================
+  firebase-emulators:
+    build:
+      context: .
+      dockerfile: Dockerfile.firebase
+    ports:
+      - "8080:8080"   # Firestore
+      - "9099:9099"   # Auth
+      - "4000:4000"   # Emulator UI
+    volumes:
+      - ./firebase.json:/app/firebase.json
+      - ./firestore.rules:/app/firestore.rules
+      - firebase-data:/app/firebase-export
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:4000"]
+      interval: 5s
+      timeout: 5s
+      retries: 30
+      start_period: 15s
+    networks:
+      - erp-network
+
+volumes:
+  firebase-data:
+
+networks:
+  erp-network:
+    driver: bridge

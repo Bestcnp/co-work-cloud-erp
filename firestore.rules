@@ -1,0 +1,177 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // =====================================================
+    // Helper Functions
+    // =====================================================
+
+    // Check if the requesting user is authenticated
+    function isAuthenticated() {
+      return request.auth != null;
+    }
+
+    // Check if the requesting user belongs to the specified tenant
+    function isTenantUser(tenantId) {
+      return isAuthenticated() && request.auth.token.tenantId == tenantId;
+    }
+
+    // Check if the requesting user is a tenant admin or owner
+    function isTenantAdmin(tenantId) {
+      return isTenantUser(tenantId) &&
+             get(/databases/$(database)/documents/tenants/$(tenantId)/users/$(request.auth.uid)).data.assignedRole in ['ADMIN', 'OWNER'];
+    }
+
+    // Check if the requesting user has a specific permission
+    function hasPermission(tenantId, permission) {
+      return isTenantUser(tenantId) &&
+             permission in get(/databases/$(database)/documents/tenants/$(tenantId)/users/$(request.auth.uid)).data.permissions;
+    }
+
+    // =====================================================
+    // Tenant Root
+    // =====================================================
+    match /tenants/{tenantId} {
+      allow read: if isTenantUser(tenantId);
+      allow write: if isTenantAdmin(tenantId);
+
+      // Users within a tenant
+      match /users/{userId} {
+        allow read: if isTenantUser(tenantId);
+        allow create: if isTenantAdmin(tenantId);
+        allow update: if isTenantAdmin(tenantId) || request.auth.uid == userId;
+        allow delete: if isTenantAdmin(tenantId);
+      }
+
+      // Tasks (Polymorphic)
+      match /tasks/{taskId} {
+        allow read: if isTenantUser(tenantId);
+        allow create: if isTenantUser(tenantId) && hasPermission(tenantId, 'can_create_tasks');
+        allow update: if isTenantUser(tenantId);
+        allow delete: if isTenantAdmin(tenantId);
+      }
+
+      // Chat Messages
+      match /chat_rooms/{chatRoomId}/messages/{messageId} {
+        allow read: if isTenantUser(tenantId);
+        allow create: if isTenantUser(tenantId);
+        allow update, delete: if false; // Chat messages are immutable
+      }
+
+      // Products
+      match /products/{productId} {
+        allow read: if isTenantUser(tenantId);
+        allow create: if isTenantUser(tenantId) && hasPermission(tenantId, 'can_manage_products');
+        allow update: if isTenantUser(tenantId) && hasPermission(tenantId, 'can_manage_products');
+        allow delete: if isTenantAdmin(tenantId);
+      }
+
+      // Showcases
+      match /showcases/{showcaseId} {
+        allow read: if isAuthenticated(); // Public read for showcases
+        allow create: if isTenantUser(tenantId);
+        allow update: if isTenantUser(tenantId);
+        allow delete: if isTenantAdmin(tenantId);
+      }
+
+      // Recruitment
+      match /recruits/{recruitId} {
+        allow read: if isTenantUser(tenantId) && hasPermission(tenantId, 'can_manage_hr');
+        allow create: if isTenantUser(tenantId) && hasPermission(tenantId, 'can_manage_hr');
+        allow update: if isTenantUser(tenantId) && hasPermission(tenantId, 'can_manage_hr');
+        allow delete: if isTenantAdmin(tenantId);
+      }
+
+      // Customers (CRM)
+      match /customers/{customerId} {
+        allow read: if isTenantUser(tenantId);
+        allow write: if isTenantUser(tenantId) && hasPermission(tenantId, 'can_manage_customers');
+      }
+
+      // Deals (CRM)
+      match /deals/{dealId} {
+        allow read: if isTenantUser(tenantId);
+        allow write: if isTenantUser(tenantId) && hasPermission(tenantId, 'can_manage_deals');
+      }
+
+      // Interactions (CRM)
+      match /interactions/{interactionId} {
+        allow read: if isTenantUser(tenantId);
+        allow create: if isTenantUser(tenantId);
+        allow update, delete: if isTenantAdmin(tenantId);
+      }
+
+      // Ledger Vouchers (ERP)
+      match /ledgers/{voucherId} {
+        allow read: if isTenantUser(tenantId) && hasPermission(tenantId, 'can_view_finance');
+        allow create: if isTenantUser(tenantId) && hasPermission(tenantId, 'can_manage_finance');
+        allow update, delete: if false; // Ledger entries are immutable
+      }
+
+      // Billing
+      match /billing/{documentId} {
+        allow read: if isTenantUser(tenantId);
+        allow write: if isTenantAdmin(tenantId);
+      }
+
+      // Events
+      match /events/{eventId} {
+        allow read: if isAuthenticated();
+        allow create: if isTenantUser(tenantId);
+        allow update: if isTenantUser(tenantId);
+        allow delete: if isTenantAdmin(tenantId);
+
+        match /attendees/{attendeeId} {
+          allow read: if isTenantUser(tenantId);
+          allow create: if isAuthenticated();
+          allow update: if isTenantUser(tenantId);
+          allow delete: if isTenantAdmin(tenantId);
+        }
+      }
+
+      // Compliance Cases
+      match /compliance_cases/{caseId} {
+        allow read: if isTenantUser(tenantId) && hasPermission(tenantId, 'can_manage_compliance');
+        allow write: if isTenantUser(tenantId) && hasPermission(tenantId, 'can_manage_compliance');
+      }
+
+      // Secure Storage (Thai IDs, KYC)
+      match /secure_storage/{documentId} {
+        allow read: if isTenantAdmin(tenantId);
+        allow write: if isTenantAdmin(tenantId);
+      }
+    }
+
+    // =====================================================
+    // Platform-Level Collections (Super Admin Only)
+    // =====================================================
+
+    // Platform Admin Registry
+    match /platform_admins/{adminId} {
+      allow read: if isAuthenticated() &&
+                     get(/databases/$(database)/documents/platform_admins/$(request.auth.uid)).data != null;
+      allow write: if false; // Managed via Admin SDK only
+    }
+
+    // Admin Review Queue (Hermes AI)
+    match /admin_review_queue/{itemId} {
+      allow read: if isAuthenticated() &&
+                     get(/databases/$(database)/documents/platform_admins/$(request.auth.uid)).data != null;
+      allow write: if false; // Managed via Admin SDK only
+    }
+
+    // Marketplace Listings (Cross-tenant, public read)
+    match /marketplace_listings/{listingId} {
+      allow read: if isAuthenticated();
+      allow write: if false; // Managed via Admin SDK / backend only
+    }
+
+    // Platform Reports
+    match /platform_reports/{reportId} {
+      allow read: if isAuthenticated() &&
+                     get(/databases/$(database)/documents/platform_admins/$(request.auth.uid)).data != null;
+      allow create: if isAuthenticated(); // Any user can submit a report
+      allow update, delete: if false; // Managed via Admin SDK only
+    }
+  }
+}

@@ -1,0 +1,16 @@
+FROM node:22-alpine
+
+# Install Java (required by Firebase emulators) and curl (for healthcheck)
+RUN apk add --no-cache openjdk17-jre curl bash
+
+# Install Firebase CLI
+RUN npm install -g firebase-tools
+
+WORKDIR /app
+
+COPY firebase.json .
+COPY firestore.rules .
+
+EXPOSE 4000 8080 9099
+
+CMD ["firebase", "emulators:start", "--project", "demo-project", "--import", "./firebase-export", "--export-on-exit", "./firebase-export"]
