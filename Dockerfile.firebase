@@ -1,7 +1,7 @@
 FROM node:22-alpine
 
 # Install Java (required by Firebase emulators) and curl (for healthcheck)
-RUN apk add --no-cache openjdk17-jre curl bash
+RUN apk add --no-cache openjdk21-jre curl bash
 
 # Install Firebase CLI
 RUN npm install -g firebase-tools

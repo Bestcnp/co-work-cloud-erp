@@ -42,6 +42,10 @@ docker-compose.override.yml
 # Vite
 vite.config.ts.timestamp-*
 
+# Secrets
+serviceAccountKey.json
+
 # Misc
 *.tgz
 .antigravitycli/
+coverage/
