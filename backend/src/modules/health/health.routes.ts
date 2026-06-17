@@ -6,7 +6,7 @@
  */
 
 import { Router } from 'express';
-import { HermesService } from '../services/hermes.service.js';
+import { HermesService } from '../../services/hermes.service.js';
 
 const router = Router();
 

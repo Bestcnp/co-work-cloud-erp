@@ -6,8 +6,8 @@
  */
 
 import type { Request, Response } from 'express';
-import { auth, db, setTenantCustomClaims } from '../config/firebase.js';
-import type { GlobalUserProfile, PdpaConsent } from '../models/index.js';
+import { auth, db, setTenantCustomClaims } from '../../config/firebase.js';
+import type { GlobalUserProfile, PdpaConsent } from '../../models/index.js';
 
 // ============================================================
 // POST /auth/register

@@ -11,7 +11,7 @@ import {
   requireAuth,
   requireTenantAccess,
   requirePermission,
-} from '../middlewares/auth.middleware.js';
+} from '../../middlewares/auth.middleware.js';
 import {
   createTenant,
   getTenant,
@@ -19,7 +19,7 @@ import {
   acceptInvitation,
   removeUser,
   updateTenantSettings,
-} from '../controllers/tenant.controller.js';
+} from './tenant.controller.js';
 
 const router = Router();
 

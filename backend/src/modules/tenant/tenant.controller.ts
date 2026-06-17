@@ -6,13 +6,13 @@
  */
 
 import type { Request, Response } from 'express';
-import { db, setTenantCustomClaims } from '../config/firebase.js';
+import { db, setTenantCustomClaims } from '../../config/firebase.js';
 import type {
   TenantConfig,
   GlobalUserProfile,
   TenantMembership,
   GpsTrackingMode,
-} from '../models/index.js';
+} from '../../models/index.js';
 
 // Default limits for STARTER tier
 const STARTER_DEFAULTS = {

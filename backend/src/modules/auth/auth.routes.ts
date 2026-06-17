@@ -9,13 +9,13 @@
  */
 
 import { Router } from 'express';
-import { requireAuth } from '../middlewares/auth.middleware.js';
+import { requireAuth } from '../../middlewares/auth.middleware.js';
 import {
   registerUser,
   switchTenant,
   getProfile,
   updateProfile,
-} from '../controllers/auth.controller.js';
+} from './auth.controller.js';
 
 const router = Router();
 

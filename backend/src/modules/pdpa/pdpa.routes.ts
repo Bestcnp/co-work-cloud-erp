@@ -6,8 +6,8 @@
  */
 
 import { Router } from 'express';
-import { requireAuth } from '../middlewares/auth.middleware.js';
-import { PdpaController } from '../controllers/pdpa.controller.js';
+import { requireAuth } from '../../middlewares/auth.middleware.js';
+import { PdpaController } from './pdpa.controller.js';
 
 const router = Router();
 

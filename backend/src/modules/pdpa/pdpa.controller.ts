@@ -9,7 +9,7 @@
  */
 
 import type { Request, Response } from 'express';
-import { PdpaService } from '../services/pdpa.service.js';
+import { PdpaService } from '../../services/pdpa.service.js';
 
 export class PdpaController {
   /**
